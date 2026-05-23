@@ -103,10 +103,34 @@ def parse_daily_caption(caption: str):
     return result
 
 
+SEEN_FILE = "seen_messages.json"
+
+def load_seen():
+    if not os.path.exists(SEEN_FILE):
+        return []
+    with open(SEEN_FILE, encoding="utf-8") as f:
+        return json.load(f)
+
+def save_seen(seen):
+    with open(SEEN_FILE, "w", encoding="utf-8") as f:
+        json.dump(seen, f)
+
 async def handle_channel_post(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.channel_post
     if not msg or str(msg.chat_id) != str(CHANNEL_ID):
         return
+
+    # Takror xabarni o'tkazib yuborish
+    seen = load_seen()
+    msg_id = msg.message_id
+    if msg_id in seen:
+        log.info(f"Xabar #{msg_id} allaqachon ko'rilgan, o'tkazildi.")
+        return
+    seen.append(msg_id)
+    # Faqat so'nggi 500 ta xabarni eslab qolamiz
+    if len(seen) > 500:
+        seen = seen[-500:]
+    save_seen(seen)
 
     caption = msg.caption or msg.text or ""
     file_id = None
@@ -470,6 +494,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "/upcoming — Kelgusi postlar\n"
         "/trial — Trial postlar holati\n"
         "/format — Post yozish formati\n\n"
+        "🗑 *O'chirish:*\n"
+        "/delete 2026-05-25 DARGAH — Kunlik postni o'chirish\n"
+        "/deltrial 5 — Trial postni o'chirish\n\n"
         "⏰ Trial: har kuni *18:00*\n"
         "⏰ Kunlik: har kuni *19:00*"
     )
