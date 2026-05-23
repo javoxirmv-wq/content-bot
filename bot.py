@@ -584,6 +584,78 @@ async def format_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode="Markdown")
 
 
+async def delete_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Kunlik postni o'chirish:
+    /delete 2026-05-25 DARGAH
+    """
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    args = context.args
+    if len(args) < 2:
+        await update.message.reply_text(
+            "❌ Noto'g'ri format!\n\n"
+            "Ishlatish:\n`/delete 2026-05-25 DARGAH`\n\n"
+            "yoki\n`/delete 2026-05-25 Muhammadjon Nuriddin`",
+            parse_mode="Markdown"
+        )
+        return
+
+    date = args[0]
+    project = " ".join(args[1:])
+
+    daily = load_daily()
+    before = len(daily)
+    daily = [p for p in daily if not (p["date"] == date and p["project"] == project)]
+    after = len(daily)
+
+    if before == after:
+        await update.message.reply_text(
+            f"⚠️ Post topilmadi!\n📅 {date}\n📌 {project}\n\n"
+            "Sana va loyiha nomini tekshiring."
+        )
+        return
+
+    save_daily(daily)
+    await update.message.reply_text(
+        f"✅ Post o'chirildi!\n📅 {date}\n📌 {project}",
+        parse_mode="Markdown"
+    )
+
+
+async def deltrial_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Trial postni o'chirish:
+    /deltrial 5
+    """
+    if update.effective_user.id != ADMIN_ID:
+        return
+
+    args = context.args
+    if not args or not args[0].isdigit():
+        await update.message.reply_text(
+            "❌ Noto'g'ri format!\n\n"
+            "Ishlatish: `/deltrial 5`\n"
+            "(5 — post raqami)",
+            parse_mode="Markdown"
+        )
+        return
+
+    position = int(args[0])
+    trial = load_trial()
+    before = len(trial)
+    trial = [p for p in trial if p["position"] != position]
+    after = len(trial)
+
+    if before == after:
+        await update.message.reply_text(f"⚠️ #{position} raqamli trial post topilmadi!")
+        return
+
+    save_trial(trial)
+    await update.message.reply_text(f"✅ Trial post #{position} o'chirildi!")
+
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  MAIN
 # ══════════════════════════════════════════════════════════════════════════════
@@ -599,6 +671,8 @@ def main():
     app.add_handler(CommandHandler("today",    today_cmd))
     app.add_handler(CommandHandler("upcoming", upcoming_cmd))
     app.add_handler(CommandHandler("format",   format_cmd))
+    app.add_handler(CommandHandler("delete",   delete_cmd))
+    app.add_handler(CommandHandler("deltrial", deltrial_cmd))
 
     # Tugmalar
     app.add_handler(CallbackQueryHandler(trial_done_callback, pattern="^trial_done$"))
